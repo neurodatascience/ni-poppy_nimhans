@@ -12,9 +12,9 @@ from datetime import datetime
 MANIFEST_COLUMNS = ["participant_id", "visit", "session", "datatype", "bids_id"]
 DATATYPES = ["anat","dwi","fmap","func","perf"]
 SESSION_MAP = {
-    'Intake': 'Intake',
-    'Follow up 1': 'Follow up 1',
-    'Follow up 2': 'Follow up 2'
+    'Intake': 'ses-01',
+    'Follow up 1': 'ses-02',
+    'Follow up 2': 'ses-03'
 }
 
 # Dashboard variables
