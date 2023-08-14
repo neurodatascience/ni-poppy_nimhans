@@ -5,6 +5,7 @@ import json
 import workflow.logger as my_logger
 from workflow.tabular import generate_manifest
 from workflow.dicom_org import run_dicom_org
+from workflow.dicom_org import check_dicom_status
 from workflow.bids_conv import run_bids_conv
 
 # argparse
@@ -50,6 +51,8 @@ for wf in workflows:
     if wf == "generate_manifest":
         logger.info(f"***All sessions are fetched while generating manifest***")
         generate_manifest.run(global_configs, task="regenerate", dash_bagel=True, logger=logger)
+        check_dicom_status.run(global_config_file, regenerate=True, empty=False)
+
     elif wf == "dicom_org":        
         run_dicom_org.run(global_configs, session, n_jobs=n_jobs)
     elif wf == "bids_conv": 
