@@ -48,5 +48,11 @@
             "VERSION": "",
             "URL": ""
         }     
+<<<<<<< HEAD:nipoppy/sample_global_configs.json
+    },
+    
+    "WORKFLOWS": []
+=======
     }
+>>>>>>> main:sample_global_configs.json
 }
