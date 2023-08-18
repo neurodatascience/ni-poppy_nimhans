@@ -9,12 +9,14 @@ import pandas as pd
 from datetime import datetime
 
 # Global variables
-MANIFEST_COLUMNS = ["participant_id", "visit", "session", "datatype", "bids_id"]
+MANIFEST_COLUMNS = ["participant_id", "visit", "session", "datatype"]
 DATATYPES = ["anat","dwi","fmap","func","perf"]
-SESSION_MAP = {
+
+# Map all clinical visits to imaging (BIDS) sessions
+VISIT_SESSION_MAP = {
     'Intake': 'ses-01',
-    'Follow up 1': 'ses-02',
-    'Follow up 2': 'ses-03'
+    'Follow up 1': None,
+    'Follow up 2': None
 }
 
 # Dashboard variables
@@ -43,6 +45,9 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
     redcap_config_json = f"{DATASET_ROOT}/proc/.redcap.json"
     redcap_config = json.load(open(redcap_config_json))
 
+    # Available imaging (BIDS) sessions
+    study_sessions = global_configs["SESSIONS"]
+
     # logger
     if logger is None:
         log_file = f"{log_dir}/bids_conv.log"
@@ -67,11 +72,11 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
     redcap_participants = query_df["record_id"].unique()
     n_participants = len(redcap_participants)
 
-    # get the list of sessions
-    redcap_sessions = query_df["redcap_event_name"].unique()
-    n_sessions = len(redcap_sessions)
+    # get the list of visits
+    redcap_visits = query_df["redcap_event_name"].unique()
+    n_visits = len(redcap_visits)
 
-    logger.info(f"Fetched {n_participants} participants and {n_sessions} sessions: {redcap_sessions}")
+    logger.info(f"Fetched {n_participants} participants and {n_visits} sessions: {redcap_visits}")
 
     # generate manifest
     if task == "regenerate":
@@ -81,11 +86,15 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
 
         manifest_df["participant_id"] = query_df["record_id"].copy()
         manifest_df["visit"] = query_df["redcap_event_name"].copy()
+        
+        # populate session and datatype
         manifest_df["session"] = query_df["redcap_event_name"].copy()
-        manifest_df["session"] = manifest_df["session"].replace(SESSION_MAP)
-        manifest_df["datatype"] = f"{DATATYPES}"
+        manifest_df["session"] = manifest_df["session"].replace(VISIT_SESSION_MAP)
+        manifest_df["datatype"] = "[]"
+        manifest_df.loc[manifest_df["session"].isin(study_sessions), "datatype"] = f"{DATATYPES}"
 
-        manifest_df["bids_id"] = manifest_df["participant_id"].apply(utils.participant_id_to_bids_id)
+        # BIDS_ID is no longer needed in the manifest --> only in the doughnut       
+        manifest_df.loc[manifest_df["session"].isin(study_sessions),"bids_id"] = manifest_df["participant_id"].apply(utils.participant_id_to_bids_id)
 
         # save manifest
         now = datetime.now() # current date and time
@@ -114,7 +123,7 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
         dash_df = query_df.copy()
         dash_df = dash_df.rename(columns={"record_id": "participant_id", "redcap_event_name": "session"})
         dash_df["bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
-        dash_df["session"] = dash_df["session"].replace(SESSION_MAP)
+        dash_df["session"] = dash_df["session"].replace(VISIT_SESSION_MAP)
 
         dash_df_melt = dash_df.melt(id_vars=DASH_INDEX_COLUMNS, var_name=DASH_NAME_COL, value_name=DASH_VAL_COL)
 
@@ -130,7 +139,7 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser(description=HELPTEXT)
     parser.add_argument('--global_config', type=str, required=True, help='path to global config file for your dataset')
-    parser.add_argument('--task', type=str, default="regenerate", required=True, help='specify either regenerate or update the manifest')
+    parser.add_argument('--task', type=str, default="regenerate", help='specify either regenerate or update the manifest')
     parser.add_argument('--query_label', type=str, default="Q1", help='query label to run')
     parser.add_argument('--dash_bagel', action='store_true', help='generate bagel for dashboard')
 
