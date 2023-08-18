@@ -2,11 +2,11 @@ import os
 from pathlib import Path
 import argparse
 import json
-import workflow.logger as my_logger
-from workflow.tabular import generate_manifest
-from workflow.dicom_org import run_dicom_org
-from workflow.dicom_org import check_dicom_status
-from workflow.bids_conv import run_bids_conv
+import nipoppy.workflow.logger as my_logger
+from nipoppy.workflow.tabular import generate_manifest
+from nipoppy.workflow.dicom_org import run_dicom_org
+from nipoppy.workflow.dicom_org import check_dicom_status
+from nipoppy.workflow.bids_conv import run_bids_conv
 
 # argparse
 HELPTEXT = """

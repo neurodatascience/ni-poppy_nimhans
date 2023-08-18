@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 import argparse
 import json
-import workflow.logger as my_logger
-import workflow.utils as utils
+import nipoppy.workflow.logger as my_logger
+import nipoppy.workflow.utils as utils
 import requests
 import pandas as pd
 from datetime import datetime
