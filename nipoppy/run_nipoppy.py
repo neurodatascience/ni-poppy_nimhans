@@ -54,9 +54,9 @@ for wf in workflows:
         check_dicom_status.run(global_config_file, regenerate=True, empty=False)
 
     elif wf == "dicom_org":        
-        run_dicom_org.run(global_configs, session, n_jobs=n_jobs)
+        run_dicom_org.run(global_configs, session, n_jobs=n_jobs, logger=logger)
     elif wf == "bids_conv": 
-        run_bids_conv.run(global_configs, session, n_jobs=n_jobs)
+        run_bids_conv.run(global_configs, session, n_jobs=n_jobs, logger=logger)
     else:
         logger.error(f"Unknown workflow: {wf}")
 

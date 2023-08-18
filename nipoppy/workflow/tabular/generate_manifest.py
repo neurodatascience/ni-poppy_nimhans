@@ -76,12 +76,13 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
     redcap_visits = query_df["redcap_event_name"].unique()
     n_visits = len(redcap_visits)
 
-    logger.info(f"Fetched {n_participants} participants and {n_visits} sessions: {redcap_visits}")
+    logger.info(f"Fetched {n_participants} participants and {n_visits} visits: {redcap_visits}")
 
     # generate manifest
     if task == "regenerate":
         logger.info("Generating manifest...")
-
+        logger.info(f"Mapping visits to sessions: {VISIT_SESSION_MAP}")
+        
         manifest_df = pd.DataFrame(columns=MANIFEST_COLUMNS)
 
         manifest_df["participant_id"] = query_df["record_id"].copy()
@@ -94,7 +95,7 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
         manifest_df.loc[manifest_df["session"].isin(study_sessions), "datatype"] = f"{DATATYPES}"
 
         # BIDS_ID is no longer needed in the manifest --> only in the doughnut       
-        manifest_df.loc[manifest_df["session"].isin(study_sessions),"bids_id"] = manifest_df["participant_id"].apply(utils.participant_id_to_bids_id)
+        # manifest_df.loc[manifest_df["session"].isin(study_sessions),"bids_id"] = manifest_df["participant_id"].apply(utils.participant_id_to_bids_id)
 
         # save manifest
         now = datetime.now() # current date and time
@@ -122,9 +123,12 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
 
         dash_df = query_df.copy()
         dash_df = dash_df.rename(columns={"record_id": "participant_id", "redcap_event_name": "session"})
-        dash_df["bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
         dash_df["session"] = dash_df["session"].replace(VISIT_SESSION_MAP)
 
+        # dash_df["bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
+        dash_df.loc[dash_df["session"].isin(study_sessions),"bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
+
+        # melt
         dash_df_melt = dash_df.melt(id_vars=DASH_INDEX_COLUMNS, var_name=DASH_NAME_COL, value_name=DASH_VAL_COL)
 
         # save bagel
