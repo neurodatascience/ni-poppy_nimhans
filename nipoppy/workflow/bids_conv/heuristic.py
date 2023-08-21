@@ -75,8 +75,13 @@ def infotodict(seqinfo):
 
         bold: ['MB_ep2d_bold_s8'],
 
-        dkiFOR: ['Diffusion_Kurtosis_FW_S2_modifide'], 
-        dkiREV: ['Diffusion_Kurtosis_FW_S2_modifide_rev'], 
+        dkiFOR: ['Diffusion_Kurtosis_FW_S2_modifide',
+                 'Diffusion_Kurtosis_FW_S2',
+                 'Diffusion_Kurtosis_FW_S2_modifide_b2000'], 
+
+        dkiREV: ['Diffusion_Kurtosis_FW_S2_modifide_rev',
+                 'Diffusion_Kurtosis_FW_S2_rev',
+                 'Diffusion_Kurtosis_FW_modifide_rev'], 
 
         "fmap": ["Field_Mapping"]
         
