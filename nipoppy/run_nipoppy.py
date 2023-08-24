@@ -72,7 +72,7 @@ for wf in workflows:
         modalities = ["T1w", "T2w"]
         
         # Run mriqc tracker to regenerate bagel
-        dash_schema_file = f"{DATASET_ROOT}/proc/bagel_schema.json" #/home/nikhil/projects/Parkinsons/nimhans/data/PD_YLO/proc/
+        dash_schema_file = f"{DATASET_ROOT}/proc/bagel_schema.json" 
         run_tracker.run(global_configs, dash_schema_file, ["mriqc"], logger=logger)
 
         proc_participants = get_new_proc_participants(global_configs, session_id, pipeline="mriqc", logger=logger)
@@ -81,8 +81,9 @@ for wf in workflows:
 
         if n_proc_participants > 0:
 
-            # Generate pybids index
-            bids_db_path = generate_pybids_index(global_configs, session_id, "mriqc", logger)
+            # TODO: Generate pybids index with relative paths to be accessible by singularity
+            # bids_db_path = generate_pybids_index(global_configs, session_id, "mriqc", logger)
+            bids_db_path = None
 
             if n_jobs > 1:
                 # Process in parallel! (Won't write to logs)
