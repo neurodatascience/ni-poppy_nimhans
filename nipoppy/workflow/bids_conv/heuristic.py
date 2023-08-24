@@ -86,7 +86,7 @@ def infotodict(seqinfo):
         "fmap": ["Field_Mapping"]
         
     }
-    # These protcols needs special naming based on image type (see below)
+    # These protocols needs special naming based on image type (see below)
     protocols_with_mag_and_phase = {
                                     "fmap": [fmapMag, fmapPhase],
                                     }
