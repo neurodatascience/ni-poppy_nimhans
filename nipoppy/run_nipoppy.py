@@ -39,7 +39,7 @@ session = f"ses-{session_id}"
 
 n_jobs = args.n_jobs
 
-logger = my_logger.get_logger(log_file)
+logger = my_logger.get_logger(log_file, level="INFO")
 
 logger.info("-"*75)
 logger.info(f"Starting nipoppy for {DATASET_ROOT} dataset...")
@@ -58,7 +58,7 @@ for wf in workflows:
 
     if wf == "generate_manifest":
         logger.info(f"***All sessions are fetched while generating manifest***")
-        # generate_manifest.run(global_configs, task="regenerate", dash_bagel=True, logger=logger)
+        generate_manifest.run(global_configs, task="regenerate", dash_bagel=True, logger=logger)
         check_dicom_status.run(global_config_file, regenerate=True, empty=False)
 
     elif wf == "dicom_org":        
@@ -97,6 +97,10 @@ for wf in workflows:
                 for participant_id in proc_participants:
                     res = run_mriqc.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, modalities=modalities, output_dir=None, logger=logger) 
                 mriqc_results.append(res)   
+            
+            # Rerun tracker for updated bagel
+            run_tracker.run(global_configs, dash_schema_file, ["mriqc"], logger=logger)
+
         else:
             logger.info(f"No new participants to run MRIQC on for session: {session}") 
             
