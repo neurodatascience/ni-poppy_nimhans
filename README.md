@@ -34,6 +34,7 @@ _Pull-Organize-Process-Push-Yey!_
    - Download containers (e.g. Heudiconv) for the pipelines used in this workflow inside the `containers` dir. For example: 
       - `cd /home/<user>/projects/<my_project>/containers` 
       - `singularity pull docker://nipy/heudiconv:0.13.1`
+      - `singularity pull docker://nipreps/fmriprep:23.1.3`
 3. Code
    - Change dir to `code`: `cd /home/<user>/projects/<my_project>/code/`
    - Create a new [venv](https://realpython.com/python-virtual-environments-a-primer/): `python3 -m venv nipoppy_env` 
