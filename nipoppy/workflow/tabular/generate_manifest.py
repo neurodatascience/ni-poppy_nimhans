@@ -63,7 +63,7 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
 
     # query_df = pd.read_csv("tmp_redcap_df.csv")
     # # save query df local to avoid frequent API calls
-    # # query_df.to_csv("tmp_redcap_df.csv", index=False)
+    # query_df.to_csv("tmp_redcap_df.csv", index=False)
 
     logger.info("Query results:")
     logger.info(query_df.head())

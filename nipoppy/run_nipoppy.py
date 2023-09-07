@@ -156,7 +156,6 @@ for wf in workflows:
             
             # Clean up intermediate files
             logger.info(f"Cleaning up intermediate files from {fmriprep_dir}")
-            fmriprep_dir = "/home/nikhil/projects/Parkinsons/nimhans/data/PD_YLO/derivatives/fmriprep/v23.1.3"
             fmriprep_wf_dir = glob(f"{fmriprep_dir}/fmriprep*wf")
             subject_home_dirs = glob(f"{fmriprep_dir}/output/fmriprep_home_sub-*")
             run_toml_dirs = glob(f"{fmriprep_dir}/2023*")
