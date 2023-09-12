@@ -4,6 +4,7 @@ import argparse
 import json
 import pandas as pd
 import shutil
+import numpy as np
 from glob import glob
 from joblib import Parallel, delayed
 import nipoppy.workflow.logger as my_logger
@@ -51,6 +52,7 @@ session_id = args.session_id
 session = f"ses-{session_id}"
 
 n_jobs = args.n_jobs
+MAX_BATCH = 10 # Max number of participants to run BEFORE cleaning up intermediate files
 
 logger = my_logger.get_logger(log_file, level="INFO")
 
@@ -92,7 +94,6 @@ for wf in workflows:
         logger.info(f"Running MRIQC on {n_proc_participants} participants from session: {session} and for modalities: {modalities}")
 
         if n_proc_participants > 0:
-
             # TODO: Generate pybids index with relative paths to be accessible by singularity
             bids_db_path = generate_pybids_index(global_configs, session_id, "mriqc", logger)
             # bids_db_path = None
@@ -134,38 +135,52 @@ for wf in workflows:
                 os.remove(sql_db_file)
 
             # Do a single run to regenerate bids_db from the container
+            # logger.info(f"participants: {proc_participants}")
             participant_id = proc_participants[0]
             logger.info(f"Running fmriprep on a single participant: {participant_id}")            
             res = run_fmriprep.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
                                         output_dir=None, anat_only=False, use_bids_filter=True, logger=logger)
 
-            if n_jobs > 1:
-                # Process in parallel! (Won't write to logs)
-                fmiprep_results = Parallel(n_jobs=n_jobs)(delayed(run_fmriprep.run)(
-                    global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
-                    output_dir=None, anat_only=False, use_bids_filter=True, logger=logger) 
-                    for participant_id in proc_participants)
+            # Don't run more than MAX_BATCH participants in parallel
+            # Also clean-up after MAX_BATCH participants to avoid storage issues
+            if n_proc_participants > MAX_BATCH: 
+                n_batches = int(np.ceil(n_proc_participants/MAX_BATCH))
+                logger.info(f"Running fmriprep in {n_batches} batches of at most {MAX_BATCH} participants each")
+                proc_participant_batches = np.array_split(proc_participants, n_batches)
 
             else:
-                # Useful for debugging
-                fmiprep_results = []
-                for participant_id in proc_participants:
-                    res = run_fmriprep.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
-                                        output_dir=None, anat_only=False, use_bids_filter=True, logger=logger) 
-                fmiprep_results.append(res)   
-            
-            # Clean up intermediate files
-            logger.info(f"Cleaning up intermediate files from {fmriprep_dir}")
-            fmriprep_wf_dir = glob(f"{fmriprep_dir}/fmriprep*wf")
-            subject_home_dirs = glob(f"{fmriprep_dir}/output/fmriprep_home_sub-*")
-            run_toml_dirs = glob(f"{fmriprep_dir}/2023*")
+                proc_participant_batches = [proc_participants]
 
-            logger.info(f"fmriprep_wf_dir:\n{fmriprep_wf_dir}")
-            logger.info(f"subject_home_dirs:\n{subject_home_dirs}")
-            logger.info(f"run_toml_dirs:\n{run_toml_dirs}")
+            for proc_participant_batch in proc_participant_batches:
+                proc_participant_batch = list(proc_participant_batch)
+                logger.info(f"Running fmriprep on participants: {proc_participant_batch}")
+                if n_jobs > 1:
+                    # Process in parallel! (Won't write to logs)
+                    fmiprep_results = Parallel(n_jobs=n_jobs)(delayed(run_fmriprep.run)(
+                        global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                        output_dir=None, anat_only=False, use_bids_filter=True, logger=logger) 
+                        for participant_id in proc_participant_batch)
 
-            for cleanup_dir in fmriprep_wf_dir + subject_home_dirs + run_toml_dirs:
-                shutil.rmtree(cleanup_dir)
+                else:
+                    # Useful for debugging
+                    fmiprep_results = []
+                    for participant_id in proc_participant_batch:
+                        res = run_fmriprep.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                                            output_dir=None, anat_only=False, use_bids_filter=True, logger=logger) 
+                    fmiprep_results.append(res)   
+                
+                # Clean up intermediate files
+                logger.info(f"Cleaning up intermediate files from {fmriprep_dir}")
+                fmriprep_wf_dir = glob(f"{fmriprep_dir}/fmriprep*wf")
+                subject_home_dirs = glob(f"{fmriprep_dir}/output/fmriprep_home_sub-*")
+                run_toml_dirs = glob(f"{fmriprep_dir}/2023*")
+
+                logger.info(f"fmriprep_wf_dir:\n{fmriprep_wf_dir}")
+                logger.info(f"subject_home_dirs:\n{subject_home_dirs}")
+                logger.info(f"run_toml_dirs:\n{run_toml_dirs}")
+
+                for cleanup_dir in fmriprep_wf_dir + subject_home_dirs + run_toml_dirs:
+                    shutil.rmtree(cleanup_dir)
 
             # Rerun tracker for updated bagel
             run_tracker.run(global_configs, dash_schema_file, ["fmriprep"], logger=logger)
