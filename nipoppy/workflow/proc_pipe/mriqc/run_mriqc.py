@@ -69,7 +69,7 @@ def run(participant_id, global_configs, session_id, output_dir, modalities, bids
         --work-dir /work \
         --bids-database-dir {bids_db_dir}"
         # --bids-database-wipe" # wiping and regerating bids db with catalog.py
-    
+
     CMD_ARGS = SINGULARITY_CMD + MRIQC_CMD 
     CMD = CMD_ARGS.split()
 
