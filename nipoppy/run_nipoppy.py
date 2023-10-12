@@ -142,8 +142,8 @@ for wf in workflows:
     logger.info("-"*50)
 
     if wf == "generate_manifest":
-        # logger.info(f"***All sessions are fetched while generating manifest***")
-        # generate_manifest.run(global_configs, task="regenerate", dash_bagel=True, logger=logger)
+        logger.info(f"***All sessions are fetched while generating manifest***")
+        generate_manifest.run(global_configs, task="regenerate", dash_bagel=True, logger=logger)
         logger.info(f"test run NOT generating manifest")
         make_doughnut.run(global_config_file, regenerate=True, empty=False)
 
@@ -178,6 +178,7 @@ for wf in workflows:
                 pd.DataFrame(data=proc_participants).to_csv(hpc_job_list_file, header=False, index=False)
                 
             else:
+                logger.info(f"Starting {wf} run")
                 if n_jobs > 1:
                     # Process in parallel! (Won't write to logs)
                     wf_results = Parallel(n_jobs=n_jobs)(delayed(run_mriqc.run)(
