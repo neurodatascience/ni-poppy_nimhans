@@ -14,7 +14,8 @@ from nipoppy.workflow import make_doughnut
 from nipoppy.workflow.bids_conv import run_bids_conv
 from nipoppy.workflow.proc_pipe.mriqc import run_mriqc
 from nipoppy.workflow.proc_pipe.fmriprep import run_fmriprep
-from nipoppy.workflow.proc_pipe.tractoflow import run_tractoflow
+# temp replacement proc_script to avoid complete halt after exceptions from pre-launch setup (e.g. missing files)
+from nipoppy.workflow.proc_pipe.tractoflow import run_tractoflow_exceptions
 from nipoppy.workflow.catalog import get_new_proc_participants
 from nipoppy.workflow.catalog import generate_pybids_index
 from nipoppy.trackers import run_tracker
@@ -277,7 +278,7 @@ for wf in workflows:
                     logger.info(f"Running {wf} on participants: {proc_participant_batch}")
                     if n_jobs > 1:
                         # Process in parallel! (Won't write to logs)
-                        wf_results = Parallel(n_jobs=n_jobs)(delayed(run_tractoflow.run)(
+                        wf_results = Parallel(n_jobs=n_jobs)(delayed(run_tractoflow_exceptions.run)(
                             global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
                             output_dir=None, use_bids_filter=True, logger=logger) 
                             for participant_id in proc_participant_batch)
@@ -286,7 +287,7 @@ for wf in workflows:
                         # Useful for debugging
                         wf_results = []
                         for participant_id in proc_participant_batch:
-                            res = run_tractoflow.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                            res = run_tractoflow_exceptions.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
                                                 output_dir=None, use_bids_filter=True, logger=logger) 
                         wf_results.append(res)   
                 
