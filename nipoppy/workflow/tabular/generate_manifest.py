@@ -5,6 +5,8 @@ import json
 import nipoppy.workflow.logger as my_logger
 import nipoppy.workflow.utils as utils
 import requests
+import urllib3
+import ssl
 import pandas as pd
 from datetime import datetime
 
@@ -15,8 +17,8 @@ DATATYPES = ["anat","dwi","fmap","func","perf"]
 # Map all clinical visits to imaging (BIDS) sessions
 VISIT_SESSION_MAP = {
     'Intake': 'ses-01',
-    'Follow up 1': None,
-    'Follow up 2': None
+    'Follow up 1': 'ses-02',
+    'Follow up 2': 'ses-03'
 }
 
 # Dashboard variables
@@ -24,8 +26,34 @@ DASH_INDEX_COLUMNS = ["participant_id", "session", "bids_id"]
 DASH_NAME_COL = "assessment_name"
 DASH_VAL_COL = "assessment_score"
 
+class CustomHttpAdapter (requests.adapters.HTTPAdapter):
+    # "Transport adapter" that allows us to use custom ssl_context.
+
+    def __init__(self, ssl_context=None, **kwargs):
+        self.ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = urllib3.poolmanager.PoolManager(
+            num_pools=connections, maxsize=maxsize,
+            block=block, ssl_context=self.ssl_context)
+        
+def get_legacy_session():
+    ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    ctx.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
+    session = requests.session()
+    session.mount('https://', CustomHttpAdapter(ctx))
+    return session
+
 def api_call(url, query, logger):
-    r = requests.post(url, data=query, verify=False)
+    """ API call to redcap instance to fetch predefined report"""
+    try:
+        r = requests.post(url, data=query, verify=False)
+    except Exception as e:
+        logger.warning(f"Default RedCap API request Failed: {e}")
+        logger.info("Trying legacy RedCap API request...")
+        r = get_legacy_session().post(url, data=query)
+
     http_status = str(r.status_code)
     logger.info(f'HTTP Status: {http_status}')
 
@@ -53,17 +81,35 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
         log_file = f"{log_dir}/bids_conv.log"
         logger = my_logger.get_logger(log_file)
 
-    # redcap config
-    url = redcap_config["url"]
-    query = redcap_config["queries"][query_label]
+    # timestamp
+    now = datetime.now() # current date and time
+    timestamp = now.strftime("%Y%m%d")
 
-    # run query
-    logger.info(f"Running query {query_label}...")
-    query_df = api_call(url, query, logger=logger)
+    # redcap report
+    # redcap report (backup)
+    redcap_report_fpath = f"{DATASET_ROOT}/tabular/redcap_report.csv"
+    redcap_report_bkup_dpath = f"{DATASET_ROOT}/tabular/.redcap_exports/"
+    redcap_report_bkup_fpath = f"{redcap_report_bkup_dpath}/redcap_report_{timestamp}.csv"
 
-    # query_df = pd.read_csv("tmp_redcap_df.csv")
-    # # save query df local to avoid frequent API calls
-    # query_df.to_csv("tmp_redcap_df.csv", index=False)
+    # read from backup (avoid frequent API calls)
+    if query_label in ["backup", "bkup"]:
+        logger.info(f"Reading redcap report from backup: {redcap_report_fpath}")
+        query_df = pd.read_csv(redcap_report_fpath)
+
+    else:
+        # redcap config
+        url = redcap_config["url"]
+        query = redcap_config["queries"][query_label]
+
+        # run query
+        logger.info(f"Running query {query_label}...")
+        query_df = api_call(url, query, logger=logger)
+
+        Path(redcap_report_bkup_dpath).mkdir(parents=True, exist_ok=True)
+        query_df.to_csv(redcap_report_fpath, index=False)
+        query_df.to_csv(redcap_report_bkup_fpath, index=False)
+
+        logger.info(f"Saving redcap report to {redcap_report_fpath}")
 
     logger.info("Query results:")
     logger.info(query_df.head())
@@ -94,13 +140,7 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
         manifest_df["datatype"] = "[]"
         manifest_df.loc[manifest_df["session"].isin(study_sessions), "datatype"] = f"{DATATYPES}"
 
-        # BIDS_ID is no longer needed in the manifest --> only in the doughnut       
-        # manifest_df.loc[manifest_df["session"].isin(study_sessions),"bids_id"] = manifest_df["participant_id"].apply(utils.participant_id_to_bids_id)
-
         # save manifest
-        now = datetime.now() # current date and time
-        timestamp = now.strftime("%Y%m%d")
-
         manifest_fpath = f"{DATASET_ROOT}/tabular/manifest.csv"
         manifest_bkup_dpath = f"{DATASET_ROOT}/tabular/.manifests"
         manifest_bkup_fpath = f"{manifest_bkup_dpath}/manifest_{timestamp}.csv"
@@ -125,8 +165,9 @@ def run(global_configs, task, query_label="Q1", dash_bagel=True, logger=None):
         dash_df = dash_df.rename(columns={"record_id": "participant_id", "redcap_event_name": "session"})
         dash_df["session"] = dash_df["session"].replace(VISIT_SESSION_MAP)
 
-        # dash_df["bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
-        dash_df.loc[dash_df["session"].isin(study_sessions),"bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
+        logger.info(f"dash participants: {dash_df['participant_id'].value_counts()}")
+        dash_df["bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
+        # dash_df.loc[dash_df["session"].isin(study_sessions),"bids_id"] = dash_df["participant_id"].apply(utils.participant_id_to_bids_id)
 
         # melt
         dash_df_melt = dash_df.melt(id_vars=DASH_INDEX_COLUMNS, var_name=DASH_NAME_COL, value_name=DASH_VAL_COL)
