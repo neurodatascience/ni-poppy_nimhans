@@ -276,19 +276,22 @@ for wf in workflows:
                     proc_participant_batch = list(proc_participant_batch)
                     logger.info(f"Running {wf} on participants: {proc_participant_batch}")
                     if n_jobs > 1:
+                        logger.warning(f"Tractoflow has issues with joblib parallelization. Running serially...")
+                
+                        # ---------------------------------------------------------------------------------------
                         # Process in parallel! (Won't write to logs)
-                        wf_results = Parallel(n_jobs=n_jobs)(delayed(run_tractoflow_exceptions.run)(
-                            global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
-                            output_dir=None, use_bids_filter=True, logger=logger) 
-                            for participant_id in proc_participant_batch)
-
-                    else:
-                        # Useful for debugging
-                        wf_results = []
-                        for participant_id in proc_participant_batch:
-                            res = run_tractoflow_exceptions.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
-                                                output_dir=None, use_bids_filter=True, logger=logger) 
-                        wf_results.append(res)   
+                        # wf_results = Parallel(n_jobs=n_jobs)(delayed(run_tractoflow_exceptions.run)(
+                        #     global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                        #     output_dir=None, use_bids_filter=True, logger=logger) 
+                        #     for participant_id in proc_participant_batch)
+                        # ---------------------------------------------------------------------------------------
+                    
+                    # Useful for debugging
+                    wf_results = []
+                    for participant_id in proc_participant_batch:
+                        res = run_tractoflow_exceptions.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                                            output_dir=None, use_bids_filter=True, logger=logger) 
+                    wf_results.append(res)   
                 
     else:
         logger.error(f"Unknown workflow: {wf}")
