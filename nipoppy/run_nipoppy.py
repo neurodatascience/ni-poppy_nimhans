@@ -145,7 +145,7 @@ for wf in workflows:
     if wf == "generate_manifest":
         logger.info(f"***All sessions are fetched while generating manifest***")
         generate_manifest.run(global_configs, task="regenerate", dash_bagel=True, logger=logger)
-        make_doughnut.run(global_config_file, regenerate=True, empty=False)
+        make_doughnut.run(global_configs, regenerate=True, empty=False)
 
     elif wf == "dicom_org":        
         run_dicom_org.run(global_configs, session_id, n_jobs=n_jobs, logger=logger)
