@@ -48,7 +48,8 @@ def parse_data(global_configs, bids_dir, participant_id, session_id, use_bids_fi
     ## load the bids filter if it's called
     if use_bids_filter:
 
-        bidf_path = Path(f"{DATASET_ROOT}", 'proc', 'bids_filter_tractoflow.json') ## is this where it will always be?
+        # bidf_path = Path(f"{DATASET_ROOT}", 'proc', 'bids_filter_tractoflow.json') ## is this where it will always be?
+        bidf_path = f"{DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json"
         ## or does this need to turn into a path to a filter to load?
 
         ## if a filter exists
@@ -431,7 +432,7 @@ def run(participant_id, global_configs, session_id, output_dir, use_bids_filter,
     
     ## initialize the logger
     if logger is None:
-        log_file = f"{LOGDIR}/{participant_id}_ses-{session_id}_tractoflow.log"
+        log_file = f"{LOGDIR}/tractoflow/{participant_id}_ses-{session_id}_tractoflow.log"
         logger = my_logger.get_logger(log_file)
 
     ## log the info
@@ -449,11 +450,11 @@ def run(participant_id, global_configs, session_id, output_dir, use_bids_filter,
 
     ## Copy bids_filter.json 
     if use_bids_filter:
-        if not os.path.exists(f"{DATASET_ROOT}/proc/bids_filter_tractoflow.json"):
-            logger.info(f"Copying ./bids_filter.json to {DATASET_ROOT}/proc/bids_filter_tractoflow.json (to be seen by Singularity container)")
-            shutil.copyfile(f"{CWD}/bids_filter.json", f"{DATASET_ROOT}/proc/bids_filter_tractoflow.json")
+        if not os.path.exists(f"{DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json"):
+            logger.info(f"bids_filter not found for {DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json")
         else:
-            logger.info(f"Using found {DATASET_ROOT}/proc/bids_filter_tractoflow.json")
+            logger.info(f"Using found {DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json")
+            
         
     # exception handling for pre-launch setup
     # There are too many file/data checks that could fail
