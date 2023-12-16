@@ -18,7 +18,7 @@ from nipoppy.workflow.proc_pipe.fmriprep import run_fmriprep
 from nipoppy.workflow.proc_pipe.tractoflow import run_tractoflow_exceptions
 from nipoppy.workflow.catalog import get_new_proc_participants
 from nipoppy.workflow.catalog import generate_pybids_index
-from nipoppy.trackers import run_tracker
+from nipoppy.trackers import run_tracker_exceptions
 
 # helper functions
 def get_proc_batches(proc_participants, MAX_BATCH, logger):
@@ -27,7 +27,7 @@ def get_proc_batches(proc_participants, MAX_BATCH, logger):
     n_proc_participants = len(proc_participants)
     if n_proc_participants > MAX_BATCH: 
         n_batches = int(np.ceil(n_proc_participants/MAX_BATCH))
-        logger.info(f"Running fmriprep in {n_batches} batches of at most {MAX_BATCH} participants each")
+        logger.info(f"Running in {n_batches} batches of at most {MAX_BATCH} participants each")
         proc_participant_batches = np.array_split(proc_participants, n_batches)
     else:
         proc_participant_batches = [proc_participants]    
@@ -162,7 +162,7 @@ for wf in workflows:
                            "/perf"]
 
         # Run mriqc tracker to regenerate bagel
-        run_tracker.run(global_configs, dash_schema_file, [wf], session_id=session_id, logger=logger)
+        run_tracker_exceptions.run(global_configs, dash_schema_file, [wf], session_id=session_id, logger=logger)
 
         proc_participants, _ = get_new_proc_participants(global_configs, session_id, pipeline=wf, logger=logger)
         n_proc_participants = len(proc_participants)        
@@ -203,7 +203,7 @@ for wf in workflows:
                            "/swi/",
                            "/perf"]
          # Run fmriprep tracker to regenerate bagel
-        run_tracker.run(global_configs, dash_schema_file, [wf], session_id=session_id, logger=logger)
+        run_tracker_exceptions.run(global_configs, dash_schema_file, [wf], session_id=session_id, logger=logger)
 
         proc_participants, _ = get_new_proc_participants(global_configs, session_id, pipeline=wf, logger=logger)
         n_proc_participants = len(proc_participants)
@@ -254,9 +254,15 @@ for wf in workflows:
     elif wf == "freesurfer":
         logger.info(f"freesurfer is currently run within the fmriprep run")
 
-    elif wf == "tractoflow":
+    elif wf == "tractoflow":       
+        # --------------------------------------------------------------------------------------- 
+        # tmp serialization of tractoflow jobs to avoid process pool errors...
+        logger.warning(f"Tractoflow has issues with joblib parallelization. Running serially...")        
+        tractoflow_n_jobs = 1
+        # ---------------------------------------------------------------------------------------
+
          # Run tractoflow tracker to regenerate bagel
-        run_tracker.run(global_configs, dash_schema_file, [wf], session_id=session_id, logger=logger)
+        run_tracker_exceptions.run(global_configs, dash_schema_file, [wf], session_id=session_id, logger=logger)
 
         proc_participants, _ = get_new_proc_participants(global_configs, session_id, pipeline=wf, logger=logger)
         n_proc_participants = len(proc_participants)
@@ -275,23 +281,23 @@ for wf in workflows:
                 for proc_participant_batch in proc_participant_batches:
                     proc_participant_batch = list(proc_participant_batch)
                     logger.info(f"Running {wf} on participants: {proc_participant_batch}")
-                    if n_jobs > 1:
-                        logger.warning(f"Tractoflow has issues with joblib parallelization. Running serially...")
-                
+                    if tractoflow_n_jobs > 1:                        
+
                         # ---------------------------------------------------------------------------------------
                         # Process in parallel! (Won't write to logs)
-                        # wf_results = Parallel(n_jobs=n_jobs)(delayed(run_tractoflow_exceptions.run)(
-                        #     global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
-                        #     output_dir=None, use_bids_filter=True, logger=logger) 
-                        #     for participant_id in proc_participant_batch)
+                        wf_results = Parallel(n_jobs=tractoflow_n_jobs)(delayed(run_tractoflow_exceptions.run)(
+                            global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                            output_dir=None, use_bids_filter=True, logger=logger) 
+                            for participant_id in proc_participant_batch)
                         # ---------------------------------------------------------------------------------------
-                    
-                    # Useful for debugging
-                    wf_results = []
-                    for participant_id in proc_participant_batch:
-                        res = run_tractoflow_exceptions.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
-                                            output_dir=None, use_bids_filter=True, logger=logger) 
-                    wf_results.append(res)   
+
+                    else: 
+                        # Useful for debugging
+                        wf_results = []
+                        for participant_id in proc_participant_batch:
+                            res = run_tractoflow_exceptions.run(global_configs=global_configs, session_id=session_id, participant_id=participant_id, 
+                                                output_dir=None, use_bids_filter=True, logger=logger) 
+                        wf_results.append(res)   
                 
     else:
         logger.error(f"Unknown workflow: {wf}")
@@ -302,7 +308,7 @@ for wf in workflows:
 
 # Rerun tracker(s) to update bagel
 logger.info(f"Running ALL trackers: {ALL_TRACKERS} to update bagel")
-run_tracker.run(global_configs, dash_schema_file, ALL_TRACKERS, session_id="ALL", logger=logger)
+run_tracker_exceptions.run(global_configs, dash_schema_file, ALL_TRACKERS, session_id="ALL", logger=logger)
 
 logger.info("-"*75)
 logger.info(f"Finishing nipoppy run...")

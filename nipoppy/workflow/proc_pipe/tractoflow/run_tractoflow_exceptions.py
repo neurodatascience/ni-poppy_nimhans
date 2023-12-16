@@ -450,7 +450,8 @@ def run(participant_id, global_configs, session_id, output_dir, use_bids_filter,
 
     ## Copy bids_filter.json 
     if use_bids_filter:
-        if not os.path.exists(f"{DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json"):
+        bids_filter_path = f"{DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json"
+        if not os.path.exists(bids_filter_path):
             logger.info(f"bids_filter not found for {DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json")
         else:
             logger.info(f"Using found {DATASET_ROOT}/proc/bids_filter_tractoflow/{participant_id}_ses-{session_id}_bids_filter.json")

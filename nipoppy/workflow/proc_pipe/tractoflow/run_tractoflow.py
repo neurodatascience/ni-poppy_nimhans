@@ -20,7 +20,7 @@ CWD = os.path.dirname(os.path.abspath(fname))
 
 # env vars relative to the container.
 
-MEM_MB = 12000
+MEM_MB = 4000
 
 def parse_data(global_configs, bids_dir, participant_id, session_id, use_bids_filter=False, logger=None):
     """ Parse and verify the input files to build TractoFlow's simplified input to avoid their custom BIDS filter
